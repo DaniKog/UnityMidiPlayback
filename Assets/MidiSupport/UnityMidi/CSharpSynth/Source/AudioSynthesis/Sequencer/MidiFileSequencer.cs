@@ -76,6 +76,14 @@ namespace AudioSynthesis.Sequencer
             LoadMidiFile(midiFile);
             return true;
         }
+        public bool LoadMidiTrack(MidiTrack midiTrack, double BPM, int division)
+        {
+            if (playing == true)
+                return false;
+            LoadMidiTrackMessages(midiTrack, BPM, division);
+            return true;
+        }
+
         public bool UnloadMidi()
         {
             if (playing == true)
@@ -159,6 +167,24 @@ namespace AudioSynthesis.Sequencer
             }
         }
         //--Private Methods
+        private void LoadMidiTrackMessages(MidiTrack midiTrack, double BPM, int division)
+        {
+            mdata = new MidiMessage[midiTrack.MidiEvents.Length];
+            double absDelta = 0.0;
+            for (int x = 0; x < mdata.Length; x++)
+            {
+                MidiEvent mEvent = midiTrack.MidiEvents[x];
+                mdata[x] = new MidiMessage((byte)mEvent.Channel, (byte)mEvent.Command, (byte)mEvent.Data1, (byte)mEvent.Data2);
+                absDelta += synth.SampleRate * mEvent.DeltaTime * (60.0 / (BPM * division));
+                mdata[x].delta = (int)absDelta;
+                //Update tempo
+                if (mEvent.Command == 0xFF && mEvent.Data1 == 0x51)
+                    BPM = Math.Round(MidiHelper.MicroSecondsPerMinute / (double)((MetaNumberEvent)mEvent).Value, 2);
+            }
+            //Set total time to proper value
+            totalTime = mdata[mdata.Length - 1].delta;
+        }
+
         private void LoadMidiFile(MidiFile midiFile)
         {
             //Converts midi to sample based format for easy sequencing
