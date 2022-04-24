@@ -42509,25 +42509,25 @@ MonoBehaviour:
       m_NoteOnOff: 0
   midiTracks:
   - name: Melody
-    play: 0
+    play: 1
   - name: Piano
     play: 1
   - name: Brass
-    play: 0
+    play: 1
   - name: Guitar
-    play: 0
+    play: 1
   - name: Brass
-    play: 0
+    play: 1
   - name: Strings
-    play: 0
+    play: 1
   - name: 'Strings '
-    play: 0
+    play: 1
   - name: Harp
-    play: 0
+    play: 1
   - name: Bass
-    play: 0
+    play: 1
   - name: Drums
-    play: 0
+    play: 1
 --- !u!82 &1755118036
 AudioSource:
   m_ObjectHideFlags: 0
