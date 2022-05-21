@@ -213,6 +213,15 @@ namespace AudioSynthesis.Synthesis
                 synthChannels[x].program = 0;
             }
         }
+        public void SetProgram(int channel, int program)
+        {
+            if (bank != null)
+            {
+                SynthParameters sChannel = synthChannels[channel];
+                sChannel.program = Convert.ToByte(program);
+            }
+        }
+
         public string GetProgramName(int channel)
         {
             if (bank != null)

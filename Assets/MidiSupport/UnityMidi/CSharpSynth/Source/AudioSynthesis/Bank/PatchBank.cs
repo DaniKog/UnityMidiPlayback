@@ -136,7 +136,10 @@ namespace AudioSynthesis.Bank
         {
             if (bank.ContainsKey(bankNumber))
             {
-                return bank[bankNumber][patchNumber];
+                if(bank[bankNumber].Length > patchNumber)
+                {
+                    return bank[bankNumber][patchNumber];
+                }
             }
             return null;
         }
@@ -150,6 +153,14 @@ namespace AudioSynthesis.Bank
                     if (patches[x] != null && patches[x].Name.Equals(name))
                         return patches[x];
                 }
+            }
+            return null;
+        }
+        public String GetPatchName(int bankNumber, int patchNumber)
+        {
+            if (bank.ContainsKey(bankNumber))
+            {
+                return bank[bankNumber][patchNumber].Name;
             }
             return null;
         }

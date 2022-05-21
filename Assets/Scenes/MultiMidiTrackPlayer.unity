@@ -241,29 +241,38 @@ MonoBehaviour:
     streamingAssetPath: CSharpSynth/GMBank.bank
   midiSource:
     streamingAssetPath: ExampleMidis/I  Will survivie.mid
-  loadOnAwake: 0
   playOnAwake: 1
   midiTracks:
   - name: Melody
     play: 1
+    synthProgram: []
   - name: Piano
-    play: 0
+    play: 1
+    synthProgram: []
   - name: Brass
-    play: 0
+    play: 1
+    synthProgram: []
   - name: Guitar
-    play: 0
+    play: 1
+    synthProgram: []
   - name: Brass
-    play: 0
+    play: 1
+    synthProgram: []
   - name: Strings
-    play: 0
+    play: 1
+    synthProgram: []
   - name: 'Strings '
-    play: 0
+    play: 1
+    synthProgram: []
   - name: Harp
-    play: 0
+    play: 1
+    synthProgram: []
   - name: Bass
-    play: 0
+    play: 1
+    synthProgram: []
   - name: Drums
-    play: 0
+    play: 1
+    synthProgram: []
 --- !u!4 &1111043256
 Transform:
   m_ObjectHideFlags: 0

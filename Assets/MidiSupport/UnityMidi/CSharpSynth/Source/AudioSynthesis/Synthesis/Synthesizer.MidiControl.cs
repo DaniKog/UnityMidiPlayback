@@ -330,7 +330,8 @@ namespace AudioSynthesis.Synthesis
                     #endregion
                     break;
                 case 0xC0: //Program Change
-                    synthChannels[channel].program = (byte)data1;
+                    //Program change is coming from the Editor
+                    //synthChannels[channel].program = (byte)data1;
                     break;
                 case 0xD0: //Channel Aftertouch
                     synthChannels[channel].channelAfterTouch = (byte)data2;

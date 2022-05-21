@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 using AudioSynthesis.Bank;
 using AudioSynthesis.Synthesis;
 using AudioSynthesis.Sequencer;
@@ -17,19 +18,21 @@ namespace UnityMidi
         [HideInInspector] public string name;
         public bool play = true;
         [HideInInspector] public MidiTrack track;
-        [HideInInspector] public MidiFileSequencer sequencer;
+        [HideInInspector] public string[] synthPrograms;
+        [HideInInspector] public int synthIndex;
     }
 
     public class MidiMultiTrackPlayer : MonoBehaviour
     {
+        [HideInInspector] MidiFileSequencer sequencer;
         [SerializeField] StreamingAssetResouce bankSource;
         [SerializeField] StreamingAssetResouce midiSource;
-        [SerializeField] bool loadOnAwake = true;
         [SerializeField] bool playOnAwake = true;
         int channel = 2;
         int sampleRate = 48000;
         int bufferSize = 512;
-        [SerializeField] List<MidiTrackPlayback> midiTracks = new List<MidiTrackPlayback>();
+        [HideInInspector] public List<MidiTrackPlayback> midiTracks = new List<MidiTrackPlayback>();
+        Dictionary<string, int> synthPrograms = new Dictionary<string, int>();
         PatchBank bank;
         MidiFile midi;
         Synthesizer synthesizer;
@@ -37,29 +40,60 @@ namespace UnityMidi
         //MidiFileSequencer sequencer;
         int bufferHead;
         float[] currentBuffer;
+        [HideInInspector] public bool midiloaded = false;
 
         // Start is called before the first frame update
         public void Awake()
         {
             synthesizer = new Synthesizer(sampleRate, channel, bufferSize, 1);
             audioSource = GetComponent<AudioSource>();
+            sequencer = new MidiFileSequencer(synthesizer);
+            sequencer.LoadMidi(new MidiFile(midiSource));
             LoadBank(new PatchBank(bankSource));
-
-            if (loadOnAwake)
-            {
-                LoadMidiIntoTracks(new MidiFile(midiSource));
-            }
 
             if (playOnAwake)
             {
-                PlayTracks();
+                sequencer.Play();
             }
+
+            //Setup playback rules
+            for (int i = 0; i < midiTracks.Count; i++)
+            {
+                sequencer.Synth.SetProgram(i, midiTracks[i].synthIndex);
+                
+                if (midiTracks[i].play == false)
+                {
+                    sequencer.SetMute(i, true);
+                }
+            }
+
         }
+
         public void LoadBank(PatchBank bank)
         {
             this.bank = bank;
             synthesizer.UnloadBank();
             synthesizer.LoadBank(bank);
+            if (synthPrograms.Count == 0)
+            {
+                VisuzlizeBank(bank);
+            }
+        }
+        public void VisuzlizeBank(PatchBank bank)
+        {
+            synthPrograms.Clear();
+            int bankNmber = 0;
+            while (bank.IsBankLoaded(bankNmber))
+            {
+                int patchNumber = 0;
+                while (bank.GetPatch(bankNmber, patchNumber) != null)
+                {
+                    synthPrograms.Add(patchNumber+1 + "." + bank.GetPatchName(bankNmber, patchNumber), patchNumber);
+                    patchNumber++;
+                }
+                bankNmber++;
+            }
+            UpdateSynthProgramSelection();
         }
         public void LoadAssociatedMidiIntoTracks()
         {
@@ -98,24 +132,40 @@ namespace UnityMidi
                     midiTracks.Add(midiTrackPlayback);
                 }
             }
+            UpdateSynthProgramSelection();
         }
-        public void PlayTracks()
+        public void UpdateSynthProgramSelection()
         {
-            //TODO Ability to save the midi file and not reinitilize Midifile on Play
-            foreach (MidiTrackPlayback track in midiTracks)
+            if(synthPrograms.Count > 0)
             {
-                if (track.play)
+                var stringKeys = new string[synthPrograms.Count];
+                Dictionary<string, int>.KeyCollection keys = synthPrograms.Keys;
+                int i = 0;
+                foreach (string key in keys)
                 {
-                    track.sequencer = new MidiFileSequencer(synthesizer);
-                    track.sequencer.Stop();
-                    track.sequencer.UnloadMidi();
-                    track.sequencer.LoadMidiTrack(track.track, midi.BPM, midi.Division);
-                    track.sequencer.Play();
+                    stringKeys[i] = key;
+                    i++;
+                }
+
+                for (i = 0; i < midiTracks.Count; i++)
+                {
+                    midiTracks[i].synthPrograms = stringKeys;
                 }
             }
-            audioSource.Play();
-        }
 
+        }
+        public void OnEditorLoadMidiClicked()
+        {
+            LoadAssociatedMidiIntoTracks();
+            VisuzlizeBank(new PatchBank(bankSource));
+            midiloaded = true;
+        }
+        public void OnEditorUnloadMidiClicked()
+        {
+            midiloaded = false;
+            midiTracks.Clear();
+            synthPrograms.Clear();
+        }
         void OnAudioFilterRead(float[] data, int channel)
         {
             Debug.Assert(this.channel == channel);
@@ -124,13 +174,7 @@ namespace UnityMidi
             {
                 if (currentBuffer == null || bufferHead >= currentBuffer.Length)
                 {
-                    foreach (MidiTrackPlayback track in midiTracks)
-                    {
-                        if (track.play)
-                        {
-                            track.sequencer.FillMidiEventQueue();
-                        }
-                    }
+                    sequencer.FillMidiEventQueue();
                     synthesizer.GetNext();
                     currentBuffer = synthesizer.WorkingBuffer;
                     bufferHead = 0;
