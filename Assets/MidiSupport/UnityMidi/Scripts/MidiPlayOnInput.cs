@@ -11,19 +11,17 @@ using AudioSynthesis.Midi.Event;
 namespace UnityMidi
 {
     [RequireComponent(typeof(AudioSource))]
-
+    [System.Serializable]
+    public class MidiTrackOnInputPlayback
+    {
+        public Dictionary<string, MidiTrack> midiTracks;
+        [HideInInspector] public string[] synthPrograms;
+        [HideInInspector] public string[] midiTrackNames;
+        [HideInInspector] public int synthIndex;
+        [HideInInspector] public int trackIndex;
+    }
     public class MidiPlayOnInput : MonoBehaviour
     {
-        [System.Serializable]
-        public class MidiTrackOnInputPlayback
-        {
-            public Dictionary<string, MidiTrack> midiTracks;
-            [HideInInspector] public string[] synthPrograms;
-            [HideInInspector] public string[] midiTrackNames;
-            [HideInInspector] public int synthIndex;
-            [HideInInspector] public int trackIndex;
-        }
-
         [HideInInspector] MidiFileSequencer sequencer;
         [SerializeField] StreamingAssetResouce bankSource;
         [SerializeField] StreamingAssetResouce midiSource;
@@ -34,12 +32,15 @@ namespace UnityMidi
         Dictionary<string, int> synthPrograms = new Dictionary<string, int>();
         PatchBank bank;
         MidiFile midi;
+        MidiTrack currentPlaybackTrack;
+        int midiMessageIndex = 0;
         Synthesizer synthesizer;
         AudioSource audioSource;
         int bufferHead;
         float[] currentBuffer;
         [HideInInspector] public bool midiloaded = false;
-
+        public bool printToDebug = false;
+        bool endOfTrackReached = false;
         // Start is called before the first frame update
         public void Awake()
         {
@@ -47,12 +48,78 @@ namespace UnityMidi
             audioSource = GetComponent<AudioSource>();
             sequencer = new MidiFileSequencer(synthesizer);
             MidiFile midiFile = new MidiFile(midiSource);
-            MidiTrack track = midiOnInputPlayback.midiTracks[midiOnInputPlayback.midiTrackNames[midiOnInputPlayback.trackIndex]];
-            sequencer.LoadMidiTrack(track, midiFile.BPM, midiFile.Division);
+            //Todo find a way to keep the midiTracks loaded from editor more so we don't need to reload them on Awake
+            VizualizeAssociatedMidi();
+            currentPlaybackTrack = midiOnInputPlayback.midiTracks[midiOnInputPlayback.midiTrackNames[midiOnInputPlayback.trackIndex]];
+            //sequencer.LoadMidiTrack(track, midiFile.BPM, midiFile.Division);
             LoadBank(new PatchBank(bankSource));
+            sequencer.Synth.SetProgram(midiOnInputPlayback.trackIndex, midiOnInputPlayback.synthIndex);
             sequencer.Play();
+            InitMidiEvents();
+        }
+        void Update()
+        {
+            if (Input.GetKeyDown("space"))
+            {
+                if (!endOfTrackReached)
+                {
+                    AddMidiEvent(currentPlaybackTrack.MidiEvents[midiMessageIndex]);
+                }
+                else if (printToDebug)
+                {
+                    Debug.Log("End of MidiTrack " + midiOnInputPlayback.midiTrackNames[midiOnInputPlayback.trackIndex]);
+                }    
+            }
         }
 
+        public void InitMidiEvents()
+        {
+            if (!endOfTrackReached)
+            {
+                //Send all the initial Syth setup midi event before playing any notes
+                MidiEvent midiEvent = currentPlaybackTrack.MidiEvents[midiMessageIndex];
+                if (midiEvent.Command != 0x90 && midiEvent.Command != 0x80)
+                {
+                    AddMidiEvent(midiEvent);
+                    InitMidiEvents();
+                }
+            }
+        }
+
+        public void AddMidiEvent(MidiEvent midiEvent)
+        {
+            Debug.Log(midiEvent.ToString());
+            MidiMessage midiMsg = new MidiMessage((byte)midiEvent.Channel, (byte)midiEvent.Command, (byte)midiEvent.Data1, (byte)midiEvent.Data2);
+            midiMsg.delta = 0;
+            sequencer.Synth.midiEventQueue.Enqueue(midiMsg);
+            sequencer.Synth.midiEventCounts[0]++;
+
+            if (printToDebug)
+            {
+                if (midiEvent.Command == 0x90 || midiEvent.Command == 0x80)
+                    Debug.Log(midiEvent.ToString() + " " + MidiFile.getNoteName(midiEvent.Data1));
+                else
+                    Debug.Log(midiEvent.ToString());
+            }
+
+            //Check for End of Track Message
+            if (midiEvent.Command == 0xFF && midiEvent.Data1 == 0x2F)
+            {
+                endOfTrackReached = true;
+                if (printToDebug)
+                    Debug.Log("End of MidiTrack " + midiOnInputPlayback.midiTrackNames[midiOnInputPlayback.trackIndex]);
+            }
+            else
+            {
+                midiMessageIndex++;
+                MidiEvent nextMidiEvent = currentPlaybackTrack.MidiEvents[midiMessageIndex];
+                //Check Delta time of next event to add it too to handle chords
+                if (nextMidiEvent.DeltaTime == 0)
+                {
+                    AddMidiEvent(nextMidiEvent);
+                }
+            }
+        }
         public void LoadBank(PatchBank bank)
         {
             this.bank = bank;
