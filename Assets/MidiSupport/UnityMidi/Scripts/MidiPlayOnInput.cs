@@ -41,6 +41,7 @@ namespace UnityMidi
         float[] currentBuffer;
         [HideInInspector] public bool midiloaded = false;
         public bool printToDebug = false;
+        public bool sendIndidualEventsOnInput = false;
         bool endOfTrackReached = false;
         // Start is called before the first frame update
         public void Awake()
@@ -60,15 +61,20 @@ namespace UnityMidi
         }
         void Update()
         {
-            if (Input.GetKeyDown("space"))
+            if (Input.GetKeyDown("space") || Input.GetMouseButtonDown(0))
             {
                 if (!endOfTrackReached)
                 {
-                    //Will send the note one and calcualte the next off event and couple them to together. Will take BPM and Division into acount
-                    SendNextNoteOnEvent(currentPlaybackTrack.MidiEvents[midiMessageIndex]);
-
-                    //Alternativly can skip the play back and maunally just send the next On Off event directly to the playback
-                    //SendNextNoteOnEvent(currentPlaybackTrack.MidiEvents[midiMessageIndex]);
+                    if(sendIndidualEventsOnInput)
+                    {
+                        //Bypasses playback logic and just sends the next midi event in the list. Has no considiration for BPM nor Divisions
+                        SendNextMidiEvent(currentPlaybackTrack.MidiEvents[midiMessageIndex]);
+                    }
+                    else 
+                    {
+                        //Will send the note on and calcualte the next off event and couple them to together.Takes into account the BPM nor Divisions for note length
+                        SendNextNoteOnEvent(currentPlaybackTrack.MidiEvents[midiMessageIndex]);
+                    }
 
                     sequencer.Play();
                 }
