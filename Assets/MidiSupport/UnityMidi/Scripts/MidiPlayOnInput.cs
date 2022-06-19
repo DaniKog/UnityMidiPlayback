@@ -34,6 +34,7 @@ namespace UnityMidi
         MidiFile midi;
         MidiTrack currentPlaybackTrack;
         int midiMessageIndex = 0;
+        int midiDeltaTimeErrorMargen = 5;
         Synthesizer synthesizer;
         AudioSource audioSource;
         int bufferHead;
@@ -63,7 +64,13 @@ namespace UnityMidi
             {
                 if (!endOfTrackReached)
                 {
-                    AddMidiEvent(currentPlaybackTrack.MidiEvents[midiMessageIndex]);
+                    //Will send the note one and calcualte the next off event and couple them to together. Will take BPM and Division into acount
+                    SendNextNoteOnEvent(currentPlaybackTrack.MidiEvents[midiMessageIndex]);
+
+                    //Alternativly can skip the play back and maunally just send the next On Off event directly to the playback
+                    //SendNextNoteOnEvent(currentPlaybackTrack.MidiEvents[midiMessageIndex]);
+
+                    sequencer.Play();
                 }
                 else if (printToDebug)
                 {
@@ -80,15 +87,73 @@ namespace UnityMidi
                 MidiEvent midiEvent = currentPlaybackTrack.MidiEvents[midiMessageIndex];
                 if (midiEvent.Command != 0x90 && midiEvent.Command != 0x80)
                 {
-                    AddMidiEvent(midiEvent);
+                    SendNextMidiEvent(midiEvent);
                     InitMidiEvents();
                 }
             }
         }
-
-        public void AddMidiEvent(MidiEvent midiEvent)
+        public void SendNextNoteOffEventForNote(int noteNumber)
         {
-            Debug.Log(midiEvent.ToString());
+            int deltaTimeTillOffNote = 0;
+            for (int i = midiMessageIndex; i < currentPlaybackTrack.MidiEvents.Length; i++)
+            {
+                //Creating a copy to not change any values in side the currentPlaybackTrack
+                MidiEvent nextMidiEvent = currentPlaybackTrack.MidiEvents[i];
+                deltaTimeTillOffNote += nextMidiEvent.DeltaTime;
+                //Only send note off
+                if (nextMidiEvent.Command == 0x80 && nextMidiEvent.Data1 == noteNumber)
+                {
+                    sequencer.LoadMidiEventAtRunTime(nextMidiEvent, midi.BPM, midi.Division, deltaTimeTillOffNote);
+                    if (printToDebug)
+                        Debug.Log(nextMidiEvent.ToString() + " " + MidiFile.getNoteName(nextMidiEvent.Data1) + " Time: "+ deltaTimeTillOffNote);
+                    if(deltaTimeTillOffNote > 99999 || deltaTimeTillOffNote < 0)
+                            Debug.Log("STOP!");
+                    break;
+                }
+            }
+        }
+
+        public void SendNextNoteOnEvent(MidiEvent midiEvent)
+        {
+            //Check for End of Track Message
+            if (midiEvent.Command == 0xFF && midiEvent.Data1 == 0x2F)
+            {
+                endOfTrackReached = true;
+                if (printToDebug)
+                    Debug.Log("End of MidiTrack " + midiOnInputPlayback.midiTrackNames[midiOnInputPlayback.trackIndex]);
+            }
+            else
+            {
+                //Already Get the next event
+                midiMessageIndex++;
+                MidiEvent nextMidiEvent = currentPlaybackTrack.MidiEvents[midiMessageIndex];
+
+                //Only send note on
+                if (midiEvent.Command == 0x90)
+                {
+                    sequencer.LoadMidiEventAtRunTime(midiEvent, midi.BPM, midi.Division, 0);
+                    if (printToDebug)
+                        Debug.Log(midiEvent.ToString() + " " + MidiFile.getNoteName(midiEvent.Data1) + " Time: " + 0);
+
+                    SendNextNoteOffEventForNote(midiEvent.Data1);
+
+                    //Handle Chords
+                    //Sometimes some notes in the chord are not at 0 delta time so midiDeltaTimeErrorMargen handles that
+                    if (nextMidiEvent.Command == 0x90 && nextMidiEvent.DeltaTime <= midiDeltaTimeErrorMargen)
+                    {
+                        SendNextNoteOnEvent(nextMidiEvent);
+                    }
+                }
+                else
+                {
+                    SendNextNoteOnEvent(nextMidiEvent);
+                }
+            }
+
+        }
+
+        public void SendNextMidiEvent(MidiEvent midiEvent)
+        {
             MidiMessage midiMsg = new MidiMessage((byte)midiEvent.Channel, (byte)midiEvent.Command, (byte)midiEvent.Data1, (byte)midiEvent.Data2);
             midiMsg.delta = 0;
             sequencer.Synth.midiEventQueue.Enqueue(midiMsg);
@@ -116,7 +181,7 @@ namespace UnityMidi
                 //Check Delta time of next event to add it too to handle chords
                 if (nextMidiEvent.DeltaTime == 0)
                 {
-                    AddMidiEvent(nextMidiEvent);
+                    SendNextMidiEvent(nextMidiEvent);
                 }
             }
         }
@@ -202,7 +267,7 @@ namespace UnityMidi
             UpdateTrackNameSelection();
             UpdateSynthProgramSelection();
         }
-            public void UpdateTrackNameSelection()
+        public void UpdateTrackNameSelection()
         {
             if (midiOnInputPlayback.midiTracks.Count > 0)
             {
@@ -257,7 +322,7 @@ namespace UnityMidi
             {
                 if (currentBuffer == null || bufferHead >= currentBuffer.Length)
                 {
-                    sequencer.FillMidiEventQueue();
+                    sequencer.FillMidiEventQueueAsyncLoad();
                     synthesizer.GetNext();
                     currentBuffer = synthesizer.WorkingBuffer;
                     bufferHead = 0;

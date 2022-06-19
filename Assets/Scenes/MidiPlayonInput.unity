@@ -298,8 +298,8 @@ MonoBehaviour:
     - 8.Harp
     - 9.Bass
     - 10.Drums
-    synthIndex: 0
-    trackIndex: 5
+    synthIndex: 16
+    trackIndex: 8
   midiloaded: 1
   printToDebug: 1
 --- !u!82 &230801021
