@@ -1,5 +1,6 @@
 # UnityMidiPlayback
-Different Midid Playback methods for Unity
+Different Midi Playback methods for Unity
+Loosely based on C# Synth and [unity-midi](https://github.com/n-yoda/unity-midi)
 
 ## System Requirements
 
@@ -14,7 +15,7 @@ That’s it!
 - Multitrack support
 - Support Chords
 - Ability to select the synth program
-- Play one note on Input
+- Play only one note on Input
 
 ## Playback Methods
 Current there are two playback methods supported
