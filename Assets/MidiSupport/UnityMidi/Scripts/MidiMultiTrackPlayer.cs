@@ -115,8 +115,15 @@ namespace UnityMidi
                     //Name the Track correctly based on the instrument name or Track name Midi Message
                     if (midiEvent.Data1 == 0x03 || midiEvent.Data1 == 0x04)
                     {
-                        MetaTextEvent metaTextEvent = (MetaTextEvent)midiEvent;
-                        midiTrackPlayback.name = metaTextEvent.Text;
+                        if (midiEvent.GetType() == typeof(MetaTextEvent))
+                        {
+                            MetaTextEvent metaTextEvent = (MetaTextEvent)midiEvent;
+                            midiTrackPlayback.name = metaTextEvent.Text;
+                        }
+                        else
+                        {
+                            midiTrackPlayback.name = "TrackName";
+                        }
                     }
                     else if (midiEvent.Command == 0x90 || midiEvent.Command == 0x80)
                     {
