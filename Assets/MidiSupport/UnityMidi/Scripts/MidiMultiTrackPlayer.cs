@@ -7,6 +7,7 @@ using AudioSynthesis.Synthesis;
 using AudioSynthesis.Sequencer;
 using AudioSynthesis.Midi;
 using AudioSynthesis.Midi.Event;
+using System;
 
 namespace UnityMidi
 {
@@ -19,7 +20,10 @@ namespace UnityMidi
         public bool play = true;
         [HideInInspector] public MidiTrack track;
         [HideInInspector] public string[] synthPrograms;
+        [HideInInspector] public string[] banks;
         [HideInInspector] public int synthIndex;
+        [HideInInspector] public int bankIndex;
+        [HideInInspector] public bool drumTrack;
     }
 
     public class MidiMultiTrackPlayer : MonoBehaviour
@@ -32,7 +36,8 @@ namespace UnityMidi
         int sampleRate = 48000;
         int bufferSize = 512;
         [HideInInspector] public List<MidiTrackPlayback> midiTracks = new List<MidiTrackPlayback>();
-        Dictionary<string, int> synthPrograms = new Dictionary<string, int>();
+        //Dictionary<string, int> synthPrograms = new Dictionary<string, int>();
+        Dictionary<string, Dictionary<string, int>> synthBanks = new Dictionary<string, Dictionary<string, int>>();
         PatchBank bank;
         MidiFile midi;
         Synthesizer synthesizer;
@@ -41,6 +46,8 @@ namespace UnityMidi
         int bufferHead;
         float[] currentBuffer;
         [HideInInspector] public bool midiloaded = false;
+        [HideInInspector] public Tuple<bool, int> bankVisualizationDity = new Tuple<bool, int>(false, 0);
+        [HideInInspector] public Tuple<bool, int> playbackMuteDity = new Tuple<bool, int>(false, 0);
 
         // Start is called before the first frame update
         public void Awake()
@@ -59,12 +66,17 @@ namespace UnityMidi
             //Setup playback rules
             for (int i = 0; i < midiTracks.Count; i++)
             {
-                sequencer.Synth.SetProgram(i, midiTracks[i].synthIndex);
-                
+                if (midiTracks[i].drumTrack == true)
+                {
+                    sequencer.Synth.SetDrumChannel(i);
+                }
+
                 if (midiTracks[i].play == false)
                 {
                     sequencer.SetMute(i, true);
                 }
+
+                sequencer.Synth.SetProgram(i, midiTracks[i].synthIndex);
             }
         }
 
@@ -73,24 +85,39 @@ namespace UnityMidi
             this.bank = bank;
             synthesizer.UnloadBank();
             synthesizer.LoadBank(bank);
-            if (synthPrograms.Count == 0)
+            if (synthBanks.Count == 0)
             {
                 VisuzlizeBank(bank);
             }
         }
         public void VisuzlizeBank(PatchBank bank)
         {
-            synthPrograms.Clear();
-            int bankNmber = 0;
-            while (bank.IsBankLoaded(bankNmber))
+            synthBanks.Clear();
+            int bankNumber = 0;
+            int bankindex = 0;
+            while (bank.IsBankLoaded(bankNumber))
             {
                 int patchNumber = 0;
-                while (bank.GetPatch(bankNmber, patchNumber) != null)
+                string banktype = "";
+                switch (bankindex)
                 {
-                    synthPrograms.Add(patchNumber+1 + "." + bank.GetPatchName(bankNmber, patchNumber), patchNumber);
+                    case 0: banktype = "Instruments";
+                        break;
+                    case 1:
+                        banktype = "Drums";
+                        break;
+                    default: banktype = "";
+                        break;
+                }
+                string bankName = bankindex + 1 + "." +banktype;
+                synthBanks[bankName] = new Dictionary<string, int>();
+                while (bank.GetPatch(bankNumber, patchNumber) != null)
+                {
+                    synthBanks[bankName].Add(patchNumber+1 + "." + bank.GetPatchName(bankNumber, patchNumber), patchNumber);
                     patchNumber++;
                 }
-                bankNmber++;
+                bankindex++;
+                bankNumber = bankNumber + patchNumber; // Bank number is the max index of the previous patch number
             }
             UpdateSynthProgramSelection();
         }
@@ -135,26 +162,80 @@ namespace UnityMidi
                 if (hasNotes)
                 {
                     midiTrackPlayback.track = track;
+                    if (track.Instruments.Length > 0)
+                    {
+                        midiTrackPlayback.synthIndex = track.Instruments[0];
+                    }
+                    else if(track.DrumInstruments.Length > 0)
+                    {
+                        // Usually Drum bank is 2nd bank
+                        midiTrackPlayback.bankIndex = 1;
+                        midiTrackPlayback.synthIndex = track.DrumInstruments[0];
+                        midiTrackPlayback.drumTrack = true;
+                    }
                     midiTracks.Add(midiTrackPlayback);
                 }
             }
             UpdateSynthProgramSelection();
         }
+        public void UpdateBankProgramSelection()
+        {
+            int trackIndex = bankVisualizationDity.Item2;
+            midiTracks[trackIndex].synthIndex = 0;
+            
+            int bankIndex = midiTracks[trackIndex].bankIndex;
+            if (bankIndex == 1)
+            {
+                midiTracks[trackIndex].drumTrack = true;
+            }
+            else
+            {
+                midiTracks[trackIndex].drumTrack = false;
+            }
+            string bankName = midiTracks[trackIndex].banks[bankIndex];
+
+            var stringKeys = new string[synthBanks[bankName].Count];
+            Dictionary<string, int>.KeyCollection keys = synthBanks[bankName].Keys;
+
+            int j = 0;
+            foreach (string key in keys)
+            {
+                stringKeys[j] = key;
+                j++;
+            }
+            midiTracks[trackIndex].synthPrograms = stringKeys;
+            
+            bankVisualizationDity = Tuple.Create(false, 0);
+        }
         public void UpdateSynthProgramSelection()
         {
-            if(synthPrograms.Count > 0)
-            {
-                var stringKeys = new string[synthPrograms.Count];
-                Dictionary<string, int>.KeyCollection keys = synthPrograms.Keys;
-                int i = 0;
-                foreach (string key in keys)
+            if (synthBanks.Count > 0)
+            {  
+                for (int i = 0; i < midiTracks.Count; i++)
                 {
-                    stringKeys[i] = key;
-                    i++;
-                }
+                    var bankStringKeys = new string[synthBanks.Count];
+                    Dictionary<string, Dictionary<string, int>>.KeyCollection bankKeys = synthBanks.Keys;
+                    int j = 0;
+                    foreach (string key in bankKeys)
+                    {
+                        bankStringKeys[j] = key;
+                        j++;
+                    }
+                    midiTracks[i].banks = bankStringKeys;
 
-                for (i = 0; i < midiTracks.Count; i++)
-                {
+
+                    int bankIndex = midiTracks[i].bankIndex;
+                    string bankName = midiTracks[i].banks[bankIndex];
+
+                    var stringKeys = new string[synthBanks[bankName].Count];
+                    Dictionary<string, int>.KeyCollection keys = synthBanks[bankName].Keys;
+
+                    j = 0;
+                    foreach (string key in keys)
+                    {
+                        stringKeys[j] = key;
+                        j++;
+                    }
                     midiTracks[i].synthPrograms = stringKeys;
                 }
             }
@@ -170,7 +251,23 @@ namespace UnityMidi
         {
             midiloaded = false;
             midiTracks.Clear();
-            synthPrograms.Clear();
+            synthBanks.Clear();
+        }
+
+        public void OnEditorChangeMade_UpdateBankInstruments()
+        {
+            //Used mainly to update the visualization of the tracks
+            UpdateBankProgramSelection();
+        }
+        public void OnEditorChangeMade_MuteTrack()
+        {
+            int trackIndex = playbackMuteDity.Item2;
+            MuteTrack(trackIndex, !midiTracks[trackIndex].play);
+            playbackMuteDity = Tuple.Create(false, 0);
+        }
+        public void MuteTrack(int trackNumber, bool mute)
+        {
+            sequencer.SetMute(trackNumber, mute);
         }
         void OnAudioFilterRead(float[] data, int channel)
         {

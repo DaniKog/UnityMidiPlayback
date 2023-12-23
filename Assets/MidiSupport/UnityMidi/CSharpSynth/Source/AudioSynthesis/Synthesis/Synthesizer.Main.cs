@@ -206,6 +206,11 @@ namespace AudioSynthesis.Synthesis
             synthChannels[MidiHelper.DrumChannel].bankSelect = PatchBank.DrumBank;
             ReleaseAllHoldPedals();
         }
+        public void SetDrumChannel(int channel)
+        {
+            synthChannels[channel].bankSelect = PatchBank.DrumBank;
+        }
+
         public void ResetPrograms()
         {
             for (int x = 0; x < synthChannels.Length; x++)

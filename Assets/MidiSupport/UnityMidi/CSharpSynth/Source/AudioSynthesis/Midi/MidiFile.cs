@@ -201,7 +201,7 @@ namespace AudioSynthesis.Midi
             int noteOnCount = 0;
             int totalTime = 0;
             while (!new string(IOHelper.Read8BitChars(reader, 4)).Equals("MTrk"))
-            {
+                {
                 int length = BigEndianHelper.ReadInt32(reader);
                 while (length > 0)
                 {
