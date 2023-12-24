@@ -4,7 +4,7 @@ Loosely based on C# Synth and [unity-midi](https://github.com/n-yoda/unity-midi)
 
 ## System Requirements
 
-- Unity 5 Version 2021.3.3f1
+- Unity 5 Version 2022.3.14f1
 
 ## Installation
 
