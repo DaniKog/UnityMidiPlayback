@@ -33,9 +33,6 @@ namespace UnityMidi
         [SerializeField] bool playOnAwake = true;
 
         [HideInInspector] public List<MidiTrackPlayback> midiTracks = new List<MidiTrackPlayback>();
-        //Dictionary<string, int> synthPrograms = new Dictionary<string, int>();
-        Dictionary<string, Dictionary<string, int>> synthBanks = new Dictionary<string, Dictionary<string, int>>();
-
         //MidiFileSequencer sequencer;
         [HideInInspector] public bool midiloaded = false;
         [HideInInspector] public Tuple<bool, int> bankVisualizationDity = new Tuple<bool, int>(false, 0);
@@ -75,42 +72,9 @@ namespace UnityMidi
         public override void LoadBank(PatchBank bank)
         {
             base.LoadBank(bank);
-            if (synthBanks.Count == 0)
-            {
-                VisuzlizeBank(bank);
-            }
-        }
-        public void VisuzlizeBank(PatchBank bank)
-        {
-            synthBanks.Clear();
-            int bankNumber = 0;
-            int bankindex = 0;
-            while (bank.IsBankLoaded(bankNumber))
-            {
-                int patchNumber = 0;
-                string banktype = "";
-                switch (bankindex)
-                {
-                    case 0: banktype = "Instruments";
-                        break;
-                    case 1:
-                        banktype = "Drums";
-                        break;
-                    default: banktype = "";
-                        break;
-                }
-                string bankName = bankindex + 1 + "." +banktype;
-                synthBanks[bankName] = new Dictionary<string, int>();
-                while (bank.GetPatch(bankNumber, patchNumber) != null)
-                {
-                    synthBanks[bankName].Add(patchNumber+1 + "." + bank.GetPatchName(bankNumber, patchNumber), patchNumber);
-                    patchNumber++;
-                }
-                bankindex++;
-                bankNumber = bankNumber + patchNumber; // Bank number is the max index of the previous patch number
-            }
             UpdateSynthProgramSelection();
         }
+
         public void LoadAssociatedMidiIntoTracks()
         {
             MidiFile midi = new MidiFile(midiSource);
@@ -148,7 +112,7 @@ namespace UnityMidi
         }
         public void UpdateBankProgramSelection()
         {
-            if (synthBanks.Count == 0)
+            if (IsSynthBanksEmpty())
             {
                 Debug.LogWarning("Synth Banks visualization not loaded most likely you are editing a Single Track Midi");
                 return;
@@ -166,66 +130,37 @@ namespace UnityMidi
             {
                 midiTracks[trackIndex].drumTrack = false;
             }
+
             string bankName = midiTracks[trackIndex].banks[bankIndex];
-
-            var stringKeys = new string[synthBanks[bankName].Count];
-            Dictionary<string, int>.KeyCollection keys = synthBanks[bankName].Keys;
-
-            int j = 0;
-            foreach (string key in keys)
-            {
-                stringKeys[j] = key;
-                j++;
-            }
-            midiTracks[trackIndex].synthPrograms = stringKeys;
+            midiTracks[trackIndex].synthPrograms = GetSynthStringKeys(bankName); ;
             
             bankVisualizationDity = Tuple.Create(false, 0);
         }
         public void UpdateSynthProgramSelection()
         {
-            if (synthBanks.Count > 0)
-            {  
-                for (int i = 0; i < midiTracks.Count; i++)
-                {
-                    var bankStringKeys = new string[synthBanks.Count];
-                    Dictionary<string, Dictionary<string, int>>.KeyCollection bankKeys = synthBanks.Keys;
-                    int j = 0;
-                    foreach (string key in bankKeys)
-                    {
-                        bankStringKeys[j] = key;
-                        j++;
-                    }
-                    midiTracks[i].banks = bankStringKeys;
+            for (int i = 0; i < midiTracks.Count; i++)
+            {
 
+                midiTracks[i].banks = GetBankStringKeys();
 
-                    int bankIndex = midiTracks[i].bankIndex;
-                    string bankName = midiTracks[i].banks[bankIndex];
+                int bankIndex = midiTracks[i].bankIndex;
+                string bankName = midiTracks[i].banks[bankIndex];
 
-                    var stringKeys = new string[synthBanks[bankName].Count];
-                    Dictionary<string, int>.KeyCollection keys = synthBanks[bankName].Keys;
-
-                    j = 0;
-                    foreach (string key in keys)
-                    {
-                        stringKeys[j] = key;
-                        j++;
-                    }
-                    midiTracks[i].synthPrograms = stringKeys;
-                }
+                midiTracks[i].synthPrograms = GetSynthStringKeys(bankName);
             }
 
         }
         public void OnEditorLoadMidiClicked()
         {
-            LoadAssociatedMidiIntoTracks();
             VisuzlizeBank(new PatchBank(bankSource));
+            LoadAssociatedMidiIntoTracks();
             midiloaded = true;
         }
         public void OnEditorUnloadMidiClicked()
         {
             midiloaded = false;
             midiTracks.Clear();
-            synthBanks.Clear();
+            ClearSynthBanks();
         }
 
         public void OnEditorChangeMade_UpdateBankInstruments()

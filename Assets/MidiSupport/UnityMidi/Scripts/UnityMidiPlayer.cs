@@ -27,7 +27,7 @@ namespace UnityMidi
         protected MidiFile midi;
         protected Synthesizer synthesizer;
         protected AudioSource audioSource;
-        //MidiFileSequencer sequencer;
+        Dictionary<string, Dictionary<string, int>> synthBanks = new Dictionary<string, Dictionary<string, int>>();
 
         public void SetupSynth()
         {
@@ -41,6 +41,85 @@ namespace UnityMidi
             this.bank = bank;
             synthesizer.UnloadBank();
             synthesizer.LoadBank(bank);
+            if (synthBanks.Count == 0)
+            {
+                VisuzlizeBank(bank);
+            }
+        }
+        public void VisuzlizeBank(PatchBank bank)
+        {
+            synthBanks.Clear();
+            int bankNumber = 0;
+            int bankindex = 0;
+            while (bank.IsBankLoaded(bankNumber))
+            {
+                int patchNumber = 0;
+                string banktype = "";
+                switch (bankindex)
+                {
+                    case 0:
+                        banktype = "Instruments";
+                        break;
+                    case 1:
+                        banktype = "Drums";
+                        break;
+                    default:
+                        banktype = "";
+                        break;
+                }
+                string bankName = bankindex + 1 + "." + banktype;
+                synthBanks[bankName] = new Dictionary<string, int>();
+                while (bank.GetPatch(bankNumber, patchNumber) != null)
+                {
+                    synthBanks[bankName].Add(patchNumber + 1 + "." + bank.GetPatchName(bankNumber, patchNumber), patchNumber);
+                    patchNumber++;
+                }
+                bankindex++;
+                bankNumber = bankNumber + patchNumber; // Bank number is the max index of the previous patch number
+            }
+        }
+        public String[] GetBankStringKeys()
+        {
+            if (synthBanks.Count > 0)
+            {
+                var bankStringKeys = new string[synthBanks.Count];
+                Dictionary<string, Dictionary<string, int>>.KeyCollection bankKeys = synthBanks.Keys;
+                int j = 0;
+                foreach (string key in bankKeys)
+                {
+                    bankStringKeys[j] = key;
+                    j++;
+                }
+                return bankStringKeys;
+            }
+            return null;
+        }
+        public String[] GetSynthStringKeys(string bankName)
+        {
+            if (synthBanks.Count > 0)
+            {
+                var stringKeys = new string[synthBanks[bankName].Count];
+                Dictionary<string, int>.KeyCollection keys = synthBanks[bankName].Keys;
+
+                int i = 0;
+                foreach (string key in keys)
+                {
+                    stringKeys[i] = key;
+                    i++;
+                }
+                return stringKeys;
+            }
+            return null;
+        }
+
+        public void ClearSynthBanks()
+        {
+            synthBanks.Clear();
+        }
+
+        public bool IsSynthBanksEmpty()
+        {
+           return (synthBanks.Count == 0);
         }
 
         public void LoadMidi(MidiFile midi)

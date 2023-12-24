@@ -796,7 +796,7 @@ MonoBehaviour:
     banks:
     - 1.Instruments
     - 2.Drums
-    synthIndex: 73
+    synthIndex: 0
     bankIndex: 0
     drumTrack: 0
   - name: Overtdrive GTR1

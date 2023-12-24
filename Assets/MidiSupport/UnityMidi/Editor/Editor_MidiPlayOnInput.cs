@@ -18,7 +18,8 @@ public class Editor_MidiPlayOnInput : Editor
         {
             EditorGUILayout.BeginHorizontal();
             player.midiOnInputPlayback.trackIndex = EditorGUILayout.Popup(player.midiOnInputPlayback.trackIndex, player.midiOnInputPlayback.midiTrackNames);                
-            player.midiOnInputPlayback.synthIndex = EditorGUILayout.Popup(player.midiOnInputPlayback.synthIndex, player.midiOnInputPlayback.synthPrograms);                
+            player.midiOnInputPlayback.bankIndex = EditorGUILayout.Popup(player.midiOnInputPlayback.bankIndex, player.midiOnInputPlayback.banks);
+            player.midiOnInputPlayback.synthIndex = EditorGUILayout.Popup(player.midiOnInputPlayback.synthIndex, player.midiOnInputPlayback.synthPrograms);
             EditorGUILayout.EndHorizontal();
             EditorGUILayout.Space();
             if (GUILayout.Button("Reload Midi"))

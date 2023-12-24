@@ -19,11 +19,13 @@ namespace UnityMidi
         [HideInInspector] public string[] midiTrackNames;
         [HideInInspector] public int synthIndex;
         [HideInInspector] public int trackIndex;
+        [HideInInspector] public string[] banks;
+        [HideInInspector] public int bankIndex;
+        [HideInInspector] public bool drumTrack;
     }
     public class MidiPlayOnInput : UnityMidiPlayer
     {
         [HideInInspector] public MidiTrackOnInputPlayback midiOnInputPlayback = new MidiTrackOnInputPlayback();
-        Dictionary<string, int> synthPrograms = new Dictionary<string, int>();
 
         MidiTrack currentPlaybackTrack;
         int midiMessageIndex = 0;
@@ -43,9 +45,9 @@ namespace UnityMidi
             sequencer = new MidiFileSequencer(synthesizer);
             MidiFile midiFile = new MidiFile(midiSource);
             //Todo find a way to keep the midiTracks loaded from editor more so we don't need to reload them on Awake
+            LoadBank(new PatchBank(bankSource));
             VizualizeAssociatedMidi();
             currentPlaybackTrack = midiOnInputPlayback.midiTracks[midiOnInputPlayback.midiTrackNames[midiOnInputPlayback.trackIndex]];
-            LoadBank(new PatchBank(bankSource));
             sequencer.Synth.SetProgram(midiOnInputPlayback.trackIndex, midiOnInputPlayback.synthIndex);
             sequencer.Play();
             InitMidiEvents();
@@ -182,33 +184,6 @@ namespace UnityMidi
                 }
             }
         }
-        public override void LoadBank(PatchBank bank)
-        {
-            this.bank = bank;
-            synthesizer.UnloadBank();
-            synthesizer.LoadBank(bank);
-            if (synthPrograms.Count == 0)
-            {
-                VisuzlizeBank(bank);
-            }
-        }
-
-        public void VisuzlizeBank(PatchBank bank)
-        {
-            synthPrograms.Clear();
-            int bankNmber = 0;
-            while (bank.IsBankLoaded(bankNmber))
-            {
-                int patchNumber = 0;
-                while (bank.GetPatch(bankNmber, patchNumber) != null)
-                {
-                    synthPrograms.Add(patchNumber + 1 + "." + bank.GetPatchName(bankNmber, patchNumber), patchNumber);
-                    patchNumber++;
-                }
-                bankNmber++;
-            }
-            UpdateSynthProgramSelection();
-        }
 
         public void VizualizeAssociatedMidi()
         {
@@ -262,28 +237,26 @@ namespace UnityMidi
                 midiOnInputPlayback.midiTrackNames = trackNames;
             }
         }
+        public override void LoadBank(PatchBank bank) 
+        {
+            base.LoadBank(bank);
+            UpdateSynthProgramSelection();
+        }
 
         public void UpdateSynthProgramSelection()
         {
-            if (synthPrograms.Count > 0)
-            {
-                var stringKeys = new string[synthPrograms.Count];
-                Dictionary<string, int>.KeyCollection keys = synthPrograms.Keys;
-                int i = 0;
-                foreach (string key in keys)
-                {
-                    stringKeys[i] = key;
-                    i++;
-                }
+                midiOnInputPlayback.banks = GetBankStringKeys();
 
-                midiOnInputPlayback.synthPrograms = stringKeys;
-            }
+                int bankIndex = midiOnInputPlayback.bankIndex;
+                string bankName = midiOnInputPlayback.banks[bankIndex];
+
+                midiOnInputPlayback.synthPrograms = GetSynthStringKeys(bankName);
         }
 
         public void OnEditorLoadMidiClicked()
         {
-            VizualizeAssociatedMidi();
             VisuzlizeBank(new PatchBank(bankSource));
+            VizualizeAssociatedMidi();
             midiloaded = true;
         }
 
@@ -291,7 +264,7 @@ namespace UnityMidi
         {
             midiloaded = false;
             ClearMidiTracks();
-            synthPrograms.Clear();
+            ClearSynthBanks();
         }
 
         void OnAudioFilterRead(float[] data, int channel)
