@@ -28,35 +28,25 @@ namespace UnityMidi
         [HideInInspector] public bool drumTrack;
     }
 
-    public class MidiMultiTrackPlayer : MonoBehaviour
+    public class MidiMultiTrackPlayer : UnityMidiPlayer
     {
-        [HideInInspector] MidiFileSequencer sequencer;
-        [SerializeField] StreamingAssetResouce bankSource;
-        [SerializeField] StreamingAssetResouce midiSource;
         [SerializeField] bool playOnAwake = true;
-        int channel = 2;
-        int sampleRate = 48000;
-        int bufferSize = 512;
+
         [HideInInspector] public List<MidiTrackPlayback> midiTracks = new List<MidiTrackPlayback>();
         //Dictionary<string, int> synthPrograms = new Dictionary<string, int>();
         Dictionary<string, Dictionary<string, int>> synthBanks = new Dictionary<string, Dictionary<string, int>>();
-        PatchBank bank;
-        MidiFile midi;
-        Synthesizer synthesizer;
-        AudioSource audioSource;
+
         //MidiFileSequencer sequencer;
-        int bufferHead;
-        float[] currentBuffer;
         [HideInInspector] public bool midiloaded = false;
         [HideInInspector] public Tuple<bool, int> bankVisualizationDity = new Tuple<bool, int>(false, 0);
         [HideInInspector] public Tuple<bool, int> playbackMuteDity = new Tuple<bool, int>(false, 0);
 
+        int bufferHead;
+        float[] currentBuffer;
         // Start is called before the first frame update
         public void Awake()
         {
-            synthesizer = new Synthesizer(sampleRate, channel, bufferSize, 1);
-            audioSource = GetComponent<AudioSource>();
-            sequencer = new MidiFileSequencer(synthesizer);
+            SetupSynth(); 
             sequencer.LoadMidi(new MidiFile(midiSource));
             LoadBank(new PatchBank(bankSource));
 
@@ -82,11 +72,9 @@ namespace UnityMidi
             }
         }
 
-        public void LoadBank(PatchBank bank)
+        public override void LoadBank(PatchBank bank)
         {
-            this.bank = bank;
-            synthesizer.UnloadBank();
-            synthesizer.LoadBank(bank);
+            base.LoadBank(bank);
             if (synthBanks.Count == 0)
             {
                 VisuzlizeBank(bank);
@@ -128,50 +116,7 @@ namespace UnityMidi
             MidiFile midi = new MidiFile(midiSource);
             LoadMidiIntoTracks(midi);
         }
-        MidiTrack[] GetTracksFromMidi(MidiFile midi)
-        {
-            if (midi.MidiFormat == TrackFormat.MultiTrack)
-            {
-                return midi.Tracks;
-            }
-            else if (midi.MidiFormat == TrackFormat.SingleTrack)
-            {
-                MidiTrack currentTrack = midi.Tracks[0];
-                Dictionary<int, List<MidiEvent>> tracksFromTrack = new Dictionary<int, List<MidiEvent>>();
-                foreach (MidiEvent midiEvent in currentTrack.MidiEvents)
-                {
-                    if (!tracksFromTrack.ContainsKey(midiEvent.Channel))
-                    {
-                        tracksFromTrack[midiEvent.Channel] = new List<MidiEvent>();
-                    }
 
-                    tracksFromTrack[midiEvent.Channel].Add(midiEvent);
-                }
-
-                MidiTrack[] tracks = new MidiTrack[tracksFromTrack.Count];
-                Dictionary<int, List<MidiEvent>>.KeyCollection keys = tracksFromTrack.Keys;
-                
-                int i = 0;
-                foreach (int key in keys)
-                {
-                    MidiEvent[] midiEventsToAssign = new MidiEvent[tracksFromTrack[key].Count];
-                    int j = 0;
-                    foreach (MidiEvent midievent in tracksFromTrack[key])
-                    {
-                        midiEventsToAssign[j] = midievent;
-                        j++;
-                    }
-
-                    tracks[i] = new MidiTrack(currentTrack.Instruments, currentTrack.DrumInstruments, midiEventsToAssign);
-                    i++;
-                }
-                Debug.LogWarning("Midi is in a TrackFormat.SingleTrack! Track names and choosing insturment will be disabled ");
-                return tracks;
-                }
-
-            Debug.LogError("midi is in unsupported forget. Probably MultiSong mode");
-            return null;
-        }
         public void LoadMidiIntoTracks(MidiFile midi)
         {
             this.midi = midi;
@@ -180,34 +125,9 @@ namespace UnityMidi
             foreach (MidiTrack track in midiTracksToProcess)
             {
                 MidiTrackPlayback midiTrackPlayback = new MidiTrackPlayback();
-                int count = 0;
-                bool hasNotes = false;
-                while (count < track.MidiEvents.Length)
-                {
-                    MidiEvent midiEvent = track.MidiEvents[count];
+                midiTrackPlayback.name = GetTrackName(track);
 
-                    //Name the Track correctly based on the instrument name or Track name Midi Message
-                    if (midiEvent.Data1 == 0x03)
-                    {
-                        if (midiEvent.GetType() == typeof(MetaTextEvent))
-                        {
-                            MetaTextEvent metaTextEvent = (MetaTextEvent)midiEvent;
-                            midiTrackPlayback.name = metaTextEvent.Text;
-                        }
-                    }
-                    else if (midiEvent.Command == 0x90 || midiEvent.Command == 0x80)
-                    {
-                        hasNotes = true;
-                    }
-                    count++;
-                }
-                //add name just in case 
-                if (midiTrackPlayback.name == null)
-                {
-                    midiTrackPlayback.name = "Channel." + (track.MidiEvents[0].Channel + 1); //Midi channel is also 0 based
-                }
-
-                if (hasNotes)
+                if (HasNotes(track))
                 {
                     midiTrackPlayback.track = track;
                     if (track.Instruments.Length > 0)

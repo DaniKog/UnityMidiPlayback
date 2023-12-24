@@ -20,23 +20,15 @@ namespace UnityMidi
         [HideInInspector] public int synthIndex;
         [HideInInspector] public int trackIndex;
     }
-    public class MidiPlayOnInput : MonoBehaviour
+    public class MidiPlayOnInput : UnityMidiPlayer
     {
-        [HideInInspector] MidiFileSequencer sequencer;
-        [SerializeField] StreamingAssetResouce bankSource;
-        [SerializeField] StreamingAssetResouce midiSource;
-        int channel = 2;
-        int sampleRate = 48000;
-        int bufferSize = 512;
         [HideInInspector] public MidiTrackOnInputPlayback midiOnInputPlayback = new MidiTrackOnInputPlayback();
         Dictionary<string, int> synthPrograms = new Dictionary<string, int>();
-        PatchBank bank;
-        MidiFile midi;
+
         MidiTrack currentPlaybackTrack;
         int midiMessageIndex = 0;
         int midiDeltaTimeErrorMargen = 5;
-        Synthesizer synthesizer;
-        AudioSource audioSource;
+
         int bufferHead;
         float[] currentBuffer;
         [HideInInspector] public bool midiloaded = false;
@@ -53,7 +45,6 @@ namespace UnityMidi
             //Todo find a way to keep the midiTracks loaded from editor more so we don't need to reload them on Awake
             VizualizeAssociatedMidi();
             currentPlaybackTrack = midiOnInputPlayback.midiTracks[midiOnInputPlayback.midiTrackNames[midiOnInputPlayback.trackIndex]];
-            //sequencer.LoadMidiTrack(track, midiFile.BPM, midiFile.Division);
             LoadBank(new PatchBank(bankSource));
             sequencer.Synth.SetProgram(midiOnInputPlayback.trackIndex, midiOnInputPlayback.synthIndex);
             sequencer.Play();
@@ -191,7 +182,7 @@ namespace UnityMidi
                 }
             }
         }
-        public void LoadBank(PatchBank bank)
+        public override void LoadBank(PatchBank bank)
         {
             this.bank = bank;
             synthesizer.UnloadBank();
@@ -221,7 +212,7 @@ namespace UnityMidi
 
         public void VizualizeAssociatedMidi()
         {
-            MidiFile midi = new MidiFile(midiSource);
+            midi = new MidiFile(midiSource);
             VizualizeMidiTracks(midi);
         }
         public void ClearMidiTracks()
@@ -238,39 +229,15 @@ namespace UnityMidi
         public void VizualizeMidiTracks(MidiFile midi)
         {
             this.midi = midi;
-            string trackName = "null";
+            string trackName = "Track";
             int trackindex = 1;
             ClearMidiTracks();
-
-            foreach (MidiTrack track in midi.Tracks)
+            MidiTrack[] midiTracksToProcess = GetTracksFromMidi(midi);
+            foreach (MidiTrack track in midiTracksToProcess)
             {
-                int count = 0;
-                bool hasNotes = false;
-                while (count < track.MidiEvents.Length)
-                {
-                    MidiEvent midiEvent = track.MidiEvents[count];
+                trackName = GetTrackName(track);
 
-                    //Name the Track correctly based on the instrument name or Track name Midi Message
-                    if (midiEvent.Data1 == 0x03 || midiEvent.Data1 == 0x04)
-                    {
-                        if (midiEvent.GetType() == typeof(MetaTextEvent))
-                        {
-                            MetaTextEvent metaTextEvent = (MetaTextEvent)midiEvent;
-                            trackName = metaTextEvent.Text;
-                        }
-                        else
-                        {
-                            trackName = "TrackName";
-                        }
-                    }
-                    else if (midiEvent.Command == 0x90 || midiEvent.Command == 0x80)
-                    {
-                        hasNotes = true;
-                    }
-                    count++;
-                }
-
-                if (hasNotes)
+                if (HasNotes(track))
                 {
                    trackName = trackindex + "."+ trackName;
                    midiOnInputPlayback.midiTracks.Add(trackName, track);
