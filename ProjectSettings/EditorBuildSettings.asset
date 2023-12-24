@@ -6,6 +6,6 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/MultiMidiTrackVisualizer.unity
-    guid: 2cda990e2423bbf4892e6590ba056729
+    path: Assets/Scenes/MultiMidiTrackPlayer.unity
+    guid: a859361da7363664cb7e7bf1eb8d8c10
   m_configObjects: {}
