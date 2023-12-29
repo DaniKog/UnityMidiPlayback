@@ -35,7 +35,6 @@ namespace UnityMidi
         [HideInInspector] public List<MidiTrackPlayback> midiTracks = new List<MidiTrackPlayback>();
         //MidiFileSequencer sequencer;
         [HideInInspector] public bool midiloaded = false;
-        [HideInInspector] public Tuple<bool, int> bankVisualizationDity = new Tuple<bool, int>(false, 0);
         [HideInInspector] public Tuple<bool, int> playbackMuteDity = new Tuple<bool, int>(false, 0);
 
         int bufferHead;
@@ -110,32 +109,6 @@ namespace UnityMidi
             }
             UpdateSynthProgramSelection();
         }
-        public void UpdateBankProgramSelection()
-        {
-            if (IsSynthBanksEmpty())
-            {
-                Debug.LogWarning("Synth Banks visualization not loaded most likely you are editing a Single Track Midi");
-                return;
-            }
-                
-            int trackIndex = bankVisualizationDity.Item2;
-            midiTracks[trackIndex].synthIndex = 0;
-            
-            int bankIndex = midiTracks[trackIndex].bankIndex;
-            if (bankIndex == 1)
-            {
-                midiTracks[trackIndex].drumTrack = true;
-            }
-            else
-            {
-                midiTracks[trackIndex].drumTrack = false;
-            }
-
-            string bankName = midiTracks[trackIndex].banks[bankIndex];
-            midiTracks[trackIndex].synthPrograms = GetSynthStringKeys(bankName); ;
-            
-            bankVisualizationDity = Tuple.Create(false, 0);
-        }
         public void UpdateSynthProgramSelection()
         {
             for (int i = 0; i < midiTracks.Count; i++)
@@ -161,12 +134,6 @@ namespace UnityMidi
             midiloaded = false;
             midiTracks.Clear();
             ClearSynthBanks();
-        }
-
-        public void OnEditorChangeMade_UpdateBankInstruments()
-        {
-            //Used mainly to update the visualization of the tracks
-            UpdateBankProgramSelection();
         }
         public void OnEditorChangeMade_MuteTrack()
         {
