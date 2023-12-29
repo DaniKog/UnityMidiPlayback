@@ -7,6 +7,7 @@ using AudioSynthesis.Synthesis;
 using AudioSynthesis.Sequencer;
 using AudioSynthesis.Midi;
 using AudioSynthesis.Midi.Event;
+using System;
 
 namespace UnityMidi
 {
@@ -46,10 +47,21 @@ namespace UnityMidi
             MidiFile midiFile = new MidiFile(midiSource);
             //Todo find a way to keep the midiTracks loaded from editor more so we don't need to reload them on Awake
             LoadBank(new PatchBank(bankSource));
-            VizualizeAssociatedMidi();
+            VizualizeAssociatedMidi(false);
             currentPlaybackTrack = midiOnInputPlayback.midiTracks[midiOnInputPlayback.midiTrackNames[midiOnInputPlayback.trackIndex]];
-            sequencer.Synth.SetProgram(midiOnInputPlayback.trackIndex, midiOnInputPlayback.synthIndex);
+
             sequencer.Play();
+
+            if (midiOnInputPlayback.drumTrack == true)
+            {
+                sequencer.Synth.SetDrumChannel(midiOnInputPlayback.trackIndex);
+            }
+            else
+            {
+                sequencer.Synth.UnSetDrumChannel(midiOnInputPlayback.trackIndex);
+            }
+
+            sequencer.Synth.SetProgram(midiOnInputPlayback.trackIndex, midiOnInputPlayback.synthIndex);
             InitMidiEvents();
         }
         void Update()
@@ -58,12 +70,12 @@ namespace UnityMidi
             {
                 if (!endOfTrackReached)
                 {
-                    if(sendIndidualEventsOnInput)
+                    if (sendIndidualEventsOnInput)
                     {
                         //Bypasses playback logic and just sends the next midi event in the list. Has no considiration for BPM nor Divisions
                         SendNextMidiEvent(currentPlaybackTrack.MidiEvents[midiMessageIndex]);
                     }
-                    else 
+                    else
                     {
                         //Will send the note on and calcualte the next off event and couple them to together.Takes into account the BPM nor Divisions for note length
                         SendNextNoteOnEvent(currentPlaybackTrack.MidiEvents[midiMessageIndex]);
@@ -74,7 +86,7 @@ namespace UnityMidi
                 else if (printToDebug)
                 {
                     Debug.Log("End of MidiTrack " + midiOnInputPlayback.midiTrackNames[midiOnInputPlayback.trackIndex]);
-                }    
+                }
             }
         }
 
@@ -104,9 +116,9 @@ namespace UnityMidi
                 {
                     sequencer.LoadMidiEventAtRunTime(nextMidiEvent, midi.BPM, midi.Division, deltaTimeTillOffNote);
                     if (printToDebug)
-                        Debug.Log(nextMidiEvent.ToString() + " " + MidiFile.getNoteName(nextMidiEvent.Data1) + " Time: "+ deltaTimeTillOffNote);
-                    if(deltaTimeTillOffNote > 99999 || deltaTimeTillOffNote < 0)
-                            Debug.Log("STOP!");
+                        Debug.Log(nextMidiEvent.ToString() + " " + MidiFile.getNoteName(nextMidiEvent.Data1) + " Time: " + deltaTimeTillOffNote);
+                    if (deltaTimeTillOffNote > 99999 || deltaTimeTillOffNote < 0)
+                        Debug.Log("STOP!");
                     break;
                 }
             }
@@ -185,10 +197,10 @@ namespace UnityMidi
             }
         }
 
-        public void VizualizeAssociatedMidi()
+        public void VizualizeAssociatedMidi(bool setDefualt)
         {
             midi = new MidiFile(midiSource);
-            VizualizeMidiTracks(midi);
+            VizualizeMidiTracks(midi, setDefualt);
         }
         public void ClearMidiTracks()
         {
@@ -201,7 +213,7 @@ namespace UnityMidi
                 midiOnInputPlayback.midiTracks = new Dictionary<string, MidiTrack>();
             }
         }
-        public void VizualizeMidiTracks(MidiFile midi)
+        public void VizualizeMidiTracks(MidiFile midi, bool setDefault)
         {
             this.midi = midi;
             string trackName = "Track";
@@ -214,13 +226,18 @@ namespace UnityMidi
 
                 if (HasNotes(track))
                 {
-                   trackName = trackindex + "."+ trackName;
-                   midiOnInputPlayback.midiTracks.Add(trackName, track);
-                   trackindex++;
+                    trackName = trackindex + "." + trackName;
+                    midiOnInputPlayback.midiTracks[trackName] =  track;
+                    trackindex++;
                 }
+            }
+            if (setDefault)
+            {
+                SetDefaultInstumentForTrack();
             }
             UpdateTrackNameSelection();
             UpdateSynthProgramSelection();
+
         }
         public void UpdateTrackNameSelection()
         {
@@ -236,6 +253,51 @@ namespace UnityMidi
                 }
                 midiOnInputPlayback.midiTrackNames = trackNames;
             }
+        }
+        public void SetDefaultInstumentForTrack()
+        {
+            //Todo find a way to keep the midiTracks loaded from editor
+            if(midiOnInputPlayback.midiTracks == null)
+            {
+                VizualizeAssociatedMidi(false);
+            }
+            currentPlaybackTrack = midiOnInputPlayback.midiTracks[midiOnInputPlayback.midiTrackNames[midiOnInputPlayback.trackIndex]];
+            if (currentPlaybackTrack.Instruments.Length > 0)
+            {
+                midiOnInputPlayback.bankIndex = 0;
+                midiOnInputPlayback.synthIndex = currentPlaybackTrack.Instruments[0];
+                midiOnInputPlayback.drumTrack = false;
+            }
+            else if (currentPlaybackTrack.DrumInstruments.Length > 0)
+            {
+                // Usually Drum bank is 2nd bank
+                midiOnInputPlayback.bankIndex = 1;
+                midiOnInputPlayback.synthIndex = currentPlaybackTrack.DrumInstruments[0];
+                midiOnInputPlayback.drumTrack = true;
+            }
+        }
+        public void UpdateBankProgramSelection()
+        {
+            if (IsSynthBanksEmpty())
+            {
+                //TODO Handle edge case of Synth being cleared
+                VisuzlizeBank(new PatchBank(bankSource));
+            }
+
+            //midiOnInputPlayback.synthIndex = 0;
+
+            int bankIndex = midiOnInputPlayback.bankIndex;
+            if (bankIndex == 1)
+            {
+                midiOnInputPlayback.drumTrack = true;
+            }
+            else
+            {
+                midiOnInputPlayback.drumTrack = false;
+            }
+
+            string bankName = midiOnInputPlayback.banks[bankIndex];
+            midiOnInputPlayback.synthPrograms = GetSynthStringKeys(bankName); ;
         }
         public override void LoadBank(PatchBank bank) 
         {
@@ -256,7 +318,7 @@ namespace UnityMidi
         public void OnEditorLoadMidiClicked()
         {
             VisuzlizeBank(new PatchBank(bankSource));
-            VizualizeAssociatedMidi();
+            VizualizeAssociatedMidi(true);
             midiloaded = true;
         }
 
@@ -265,6 +327,23 @@ namespace UnityMidi
             midiloaded = false;
             ClearMidiTracks();
             ClearSynthBanks();
+        }
+        public void OnEditorChangeMade_BankIndex()
+        {
+            UpdateBankProgramSelection();
+        }
+        public void OnEditorChangeMade_TrackIndex()
+        {
+            if (IsSynthBanksEmpty()) // Can rewrite with SerializedField
+            {
+                VisuzlizeBank(new PatchBank(bankSource));
+                VizualizeAssociatedMidi(true);
+            }
+            else
+            {
+                SetDefaultInstumentForTrack();
+                UpdateBankProgramSelection();
+            }
         }
 
         void OnAudioFilterRead(float[] data, int channel)

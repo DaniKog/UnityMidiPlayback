@@ -17,7 +17,12 @@ public class Editor_MidiPlayOnInput : Editor
         if (player.midiloaded)
         {
             EditorGUILayout.BeginHorizontal();
-            player.midiOnInputPlayback.trackIndex = EditorGUILayout.Popup(player.midiOnInputPlayback.trackIndex, player.midiOnInputPlayback.midiTrackNames);
+            int trackIndex = EditorGUILayout.Popup(player.midiOnInputPlayback.trackIndex, player.midiOnInputPlayback.midiTrackNames);
+            if (player.midiOnInputPlayback.trackIndex != trackIndex)
+            {
+                player.midiOnInputPlayback.trackIndex = trackIndex;
+                player.OnEditorChangeMade_TrackIndex();
+            }
             EditorGUILayout.LabelField(player.midiOnInputPlayback.banks[player.midiOnInputPlayback.bankIndex]);
             player.midiOnInputPlayback.synthIndex = EditorGUILayout.Popup(player.midiOnInputPlayback.synthIndex, player.midiOnInputPlayback.synthPrograms);
             EditorGUILayout.EndHorizontal();

@@ -298,14 +298,16 @@ MonoBehaviour:
     - 8.Harp
     - 9.Bass
     - 10.Drums
-    synthIndex: 53
-    trackIndex: 0
-    banks: []
+    synthIndex: 27
+    trackIndex: 4
+    banks:
+    - 1.Instruments
+    - 2.Drums
     bankIndex: 0
     drumTrack: 0
-  midiloaded: 0
+  midiloaded: 1
   printToDebug: 1
-  sendIndidualEventsOnInput: 1
+  sendIndidualEventsOnInput: 0
 --- !u!82 &230801021
 AudioSource:
   m_ObjectHideFlags: 0

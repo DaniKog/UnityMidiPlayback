@@ -210,6 +210,10 @@ namespace AudioSynthesis.Synthesis
         {
             synthChannels[channel].bankSelect = PatchBank.DrumBank;
         }
+        public void UnSetDrumChannel(int channel)
+        {
+            synthChannels[channel].bankSelect = 0;
+        }
 
         public void ResetPrograms()
         {

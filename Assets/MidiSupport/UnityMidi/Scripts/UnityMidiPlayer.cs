@@ -23,11 +23,11 @@ namespace UnityMidi
         protected int channel = 2;
         protected int sampleRate = 48000;
         protected int bufferSize = 512;
-        protected PatchBank bank;
+        [SerializeField] protected PatchBank bank;
         protected MidiFile midi;
         protected Synthesizer synthesizer;
         protected AudioSource audioSource;
-        Dictionary<string, Dictionary<string, int>> synthBanks = new Dictionary<string, Dictionary<string, int>>();
+        [SerializeField] Dictionary<string, Dictionary<string, int>> synthBanks = new Dictionary<string, Dictionary<string, int>>();
 
         public void SetupSynth()
         {
