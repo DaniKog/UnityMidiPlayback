@@ -67,7 +67,8 @@ namespace UnityMidi
                         banktype = "";
                         break;
                 }
-                string bankName = bankindex + 1 + "." + banktype;
+                //string bankName = bankindex + 1 + "." + banktype;
+                string bankName = banktype;
                 synthBanks[bankName] = new Dictionary<string, int>();
                 while (bank.GetPatch(bankNumber, patchNumber) != null)
                 {

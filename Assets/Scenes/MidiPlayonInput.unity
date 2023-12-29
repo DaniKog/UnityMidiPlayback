@@ -156,7 +156,7 @@ MonoBehaviour:
   bankSource:
     streamingAssetPath: CSharpSynth/GMBank.bank
   midiSource:
-    streamingAssetPath: ExampleMidis/I  Will survivie.mid
+    streamingAssetPath: ExampleMidis/Queen_-_Killer_Queen_MultiTrack.mid
   midiOnInputPlayback:
     synthPrograms:
     - 1.Piano1
@@ -288,25 +288,27 @@ MonoBehaviour:
     - 127.Applause
     - 128.Gunshot
     midiTrackNames:
-    - 1.Melody
-    - 2.Piano
-    - 3.Brass
-    - 4.Guitar
-    - 5.Brass
-    - 6.Strings
-    - '7.Strings '
-    - 8.Harp
-    - 9.Bass
+    - 1.Piano
+    - 2.Bass
+    - 3.Distortion GTR1
+    - 4.Voice
+    - 5.Overdrive GTR
+    - 6.Choir
+    - 7.Overdrive GTR2
+    - 8.Overdrive GTR3
+    - 9.Overdrive GTR4
     - 10.Drums
-    synthIndex: 27
-    trackIndex: 4
+    - 11.Overdrive GTR5
+    - 12.Distortion GTR2
+    synthIndex: 73
+    trackIndex: 3
     banks:
     - 1.Instruments
     - 2.Drums
     bankIndex: 0
     drumTrack: 0
   midiloaded: 1
-  printToDebug: 1
+  printToDebug: 0
   sendIndidualEventsOnInput: 0
 --- !u!82 &230801021
 AudioSource:

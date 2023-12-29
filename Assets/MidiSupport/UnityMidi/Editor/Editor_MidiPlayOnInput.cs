@@ -23,7 +23,7 @@ public class Editor_MidiPlayOnInput : Editor
                 player.midiOnInputPlayback.trackIndex = trackIndex;
                 player.OnEditorChangeMade_TrackIndex();
             }
-            EditorGUILayout.LabelField(player.midiOnInputPlayback.banks[player.midiOnInputPlayback.bankIndex]);
+            EditorGUILayout.LabelField(player.midiOnInputPlayback.banks[player.midiOnInputPlayback.bankIndex], GUILayout.Width(100));
             player.midiOnInputPlayback.synthIndex = EditorGUILayout.Popup(player.midiOnInputPlayback.synthIndex, player.midiOnInputPlayback.synthPrograms);
             EditorGUILayout.EndHorizontal();
             EditorGUILayout.Space();

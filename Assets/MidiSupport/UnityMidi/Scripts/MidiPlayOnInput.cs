@@ -231,11 +231,12 @@ namespace UnityMidi
                     trackindex++;
                 }
             }
+
+            UpdateTrackNameSelection();
             if (setDefault)
             {
                 SetDefaultInstumentForTrack();
             }
-            UpdateTrackNameSelection();
             UpdateSynthProgramSelection();
 
         }
@@ -317,6 +318,7 @@ namespace UnityMidi
 
         public void OnEditorLoadMidiClicked()
         {
+            OnEditorUnloadMidiClicked();
             VisuzlizeBank(new PatchBank(bankSource));
             VizualizeAssociatedMidi(true);
             midiloaded = true;
@@ -327,6 +329,7 @@ namespace UnityMidi
             midiloaded = false;
             ClearMidiTracks();
             ClearSynthBanks();
+            midiOnInputPlayback = new MidiTrackOnInputPlayback();
         }
         public void OnEditorChangeMade_BankIndex()
         {
