@@ -44,6 +44,10 @@ namespace AudioSynthesis.Sequencer
         {
             get { return mdata != null; }
         }
+        public MidiMessage[] Data
+        {
+            get { return mdata; }
+        }
         public int CurrentTime
         {
             get { return sampleTime; }
@@ -112,6 +116,10 @@ namespace AudioSynthesis.Sequencer
             sampleTime = 0;
             eventIndex = 0;
         }
+        public void Pause()
+        {
+            playing = false;
+        }
         public bool IsChannelMuted(int channel)
         {
             return blockList[channel];
@@ -161,6 +169,39 @@ namespace AudioSynthesis.Sequencer
                 return;
             }
             int newMSize = (int)(synth.MicroBufferSize * playbackrate);       
+            for (int x = 0; x < synth.midiEventCounts.Length; x++)
+            {
+                sampleTime += newMSize;
+                while (eventIndex < mdata.Length && mdata[eventIndex].delta < sampleTime)
+                {
+                    if (mdata[eventIndex].command != 0x90 || blockList[mdata[eventIndex].channel] == false)
+                    {
+                        synth.midiEventQueue.Enqueue(mdata[eventIndex]);
+                        synth.midiEventCounts[x]++;
+                    }
+                    eventIndex++;
+                }
+            }
+        }
+        public void FillMidiEventQueueTillPause(double timeToStop)
+        {
+            if (!playing || synth.midiEventQueue.Count != 0)
+                return;
+            if (sampleTime >= totalTime)
+            {
+                sampleTime = 0;
+                eventIndex = 0;
+                playing = false;
+                synth.NoteOffAll(true);
+                synth.ResetPrograms();
+                synth.ResetSynthControls();
+                return;
+            }
+            if (sampleTime >= timeToStop)
+            {
+                return;
+            }
+            int newMSize = (int)(synth.MicroBufferSize * playbackrate);
             for (int x = 0; x < synth.midiEventCounts.Length; x++)
             {
                 sampleTime += newMSize;

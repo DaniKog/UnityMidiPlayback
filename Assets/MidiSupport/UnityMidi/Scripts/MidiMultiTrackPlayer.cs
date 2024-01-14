@@ -20,7 +20,7 @@ namespace UnityMidi
     {
         [HideInInspector] public string name;
         public bool play = true;
-        [HideInInspector] public MidiTrack track;
+        [SerializeField][HideInInspector] public MidiTrack track;
         [HideInInspector] public string[] synthPrograms;
         [HideInInspector] public string[] banks;
         [HideInInspector] public int synthIndex;
@@ -32,15 +32,15 @@ namespace UnityMidi
     {
         [SerializeField] bool playOnAwake = true;
 
-        [HideInInspector] public List<MidiTrackPlayback> midiTracks = new List<MidiTrackPlayback>();
+        [SerializeField][HideInInspector] public List<MidiTrackPlayback> midiTracks = new List<MidiTrackPlayback>();
         //MidiFileSequencer sequencer;
         [HideInInspector] public bool midiloaded = false;
         [HideInInspector] public Tuple<bool, int> playbackMuteDity = new Tuple<bool, int>(false, 0);
 
-        int bufferHead;
-        float[] currentBuffer;
+        protected int bufferHead;
+        protected float[] currentBuffer;
         // Start is called before the first frame update
-        public void Awake()
+        public virtual void Awake()
         {
             SetupSynth(); 
             sequencer.LoadMidi(new MidiFile(midiSource));
@@ -51,6 +51,10 @@ namespace UnityMidi
                 sequencer.Play();
             }
 
+            SetupSequnecer();
+        }
+        public void SetupSequnecer()
+        {
             //Setup playback rules
             for (int i = 0; i < midiTracks.Count; i++)
             {
@@ -66,8 +70,8 @@ namespace UnityMidi
 
                 sequencer.Synth.SetProgram(i, midiTracks[i].synthIndex);
             }
-        }
 
+        }
         public override void LoadBank(PatchBank bank)
         {
             base.LoadBank(bank);

@@ -7,10 +7,14 @@ using System;
 
 public class Editor_MidiMultiTrackPlayer : Editor
 {
+    MidiMultiTrackPlayer player;
+    private void Awake()
+    {
+        player = (MidiMultiTrackPlayer)target;
+    }
     public override void OnInspectorGUI()
     {
         base.OnInspectorGUI();
-        MidiMultiTrackPlayer player = (MidiMultiTrackPlayer)target;
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Tracks");
         
@@ -27,11 +31,9 @@ public class Editor_MidiMultiTrackPlayer : Editor
                     player.playbackMuteDity = Tuple.Create(true, i);
                 }
                 EditorGUILayout.LabelField(player.midiTracks[i].name);
-                
                 EditorGUILayout.LabelField(player.midiTracks[i].banks[player.midiTracks[i].bankIndex], GUILayout.Width(100));
                 player.midiTracks[i].synthIndex = EditorGUILayout.Popup(player.midiTracks[i].synthIndex, player.midiTracks[i].synthPrograms);
                 EditorGUILayout.EndHorizontal();
-
             }
 
             if (GUILayout.Button("Reload Midi"))

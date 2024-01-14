@@ -41,10 +41,7 @@ namespace UnityMidi
         // Start is called before the first frame update
         public void Awake()
         {
-            synthesizer = new Synthesizer(sampleRate, channel, bufferSize, 1);
-            audioSource = GetComponent<AudioSource>();
-            sequencer = new MidiFileSequencer(synthesizer);
-            MidiFile midiFile = new MidiFile(midiSource);
+            SetupSynth();
             //Todo find a way to keep the midiTracks loaded from editor more so we don't need to reload them on Awake
             LoadBank(new PatchBank(bankSource));
             VizualizeAssociatedMidi(false);

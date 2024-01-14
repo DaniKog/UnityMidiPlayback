@@ -6,12 +6,16 @@ using UnityMidi;
 
 public class Editor_MidiPlayOnInput : Editor
 {
+    MidiPlayOnInput player;
+    private void Awake()
+    {
+        player = (MidiPlayOnInput)target;
+    }
 
     public override void OnInspectorGUI()
     {
         base.OnInspectorGUI();
 
-        MidiPlayOnInput player = (MidiPlayOnInput)target;
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Track playback");
         if (player.midiloaded)
